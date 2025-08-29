@@ -1,6 +1,6 @@
 # Análisis Comparativo de Técnicas de Reducción de Dimensionalidad - Streamlit App
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://your-app-name.streamlit.app)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://your-app-name.streamlit.app)](https://proyectomlbiokevindavid.streamlit.app/)
 
 Una aplicación web interactiva desarrollada con Streamlit que presenta un análisis exhaustivo de técnicas de reducción de dimensionalidad aplicadas a la predicción del estado de salud usando datos de estilo de vida.
 
