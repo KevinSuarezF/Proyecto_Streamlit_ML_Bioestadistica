@@ -62,6 +62,10 @@ def main():
         st.session_state.analisis_completado = False
         st.session_state.resultados_analisis = None
     
+        # Inicializar el estado para los resultados del análisis completo
+        if 'analisis_completo_resultados' not in st.session_state:
+            st.session_state['analisis_completo_resultados'] = None
+    
     # Sidebar para navegación
     st.sidebar.title("Navegación")
     
@@ -69,7 +73,7 @@ def main():
     if st.sidebar.button("Ejecutar Análisis Completo", type="primary", use_container_width=True):
         st.session_state.analisis_completado = True
         st.session_state.resultados_analisis = ejecutar_analisis_completo()
-        st.rerun()
+        # st.rerun()
     
     # Mostrar menús según el estado
     if not st.session_state.analisis_completado:
@@ -106,22 +110,6 @@ def main():
         elif seccion == "Conclusiones":
             mostrar_conclusiones()
     else:
-        # Menú después del análisis - mostrar resultados
-        st.sidebar.markdown("---")
-        st.sidebar.markdown("### Análisis Completado")
-        
-        # Botón para reiniciar análisis
-        if st.sidebar.button("Ejecutar Nuevo Análisis", use_container_width=True):
-            st.session_state.analisis_completado = True
-            st.session_state.resultados_analisis = ejecutar_analisis_completo()
-            st.rerun()
-        
-        if st.sidebar.button("Volver al Menú Principal", use_container_width=True):
-            st.session_state.analisis_completado = False
-            st.session_state.resultados_analisis = None
-            st.rerun()
-        
-        st.sidebar.markdown("---")
         st.sidebar.markdown("### Resultados del Análisis")
         
         seccion_resultados = st.sidebar.selectbox(
@@ -313,7 +301,6 @@ def ejecutar_analisis_completo():
         # Mostrar resumen de resultados si están disponibles
         if 'resultados_finales' in analisis_estado:
             mostrar_resultados_completos(analisis_estado['resultados_finales'])
-    
     return analisis_estado
 
 def cargar_datos():
@@ -480,13 +467,13 @@ def analisis_exploratorio(estado):
     
     if len(numerical_cols) > 1:
         fig, ax = plt.subplots(figsize=(10, 8))
-        correlation_matrix = df[numerical_cols].corr()
-        
-        sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', center=0,
-                   square=True, ax=ax, fmt='.2f')
-        ax.set_title('Matriz de Correlación de Variables Numéricas', fontweight='bold')
-        plt.tight_layout()
-        st.pyplot(fig)
+    correlation_matrix = df[numerical_cols].corr()
+    # Mejor visualización: no mostrar los valores numéricos
+    sns.heatmap(correlation_matrix, annot=False, cmap='coolwarm', center=0,
+           square=True, ax=ax)
+    ax.set_title('Matriz de Correlación de Variables Numéricas', fontweight='bold')
+    plt.tight_layout()
+    st.pyplot(fig)
     
     # Variables categóricas vs target
     st.write("### Variables Categóricas vs Variable Objetivo")
@@ -940,11 +927,20 @@ def entrenar_modelos(estado):
     
     # Definir modelos
     modelos = {
-        "Random Forest": RandomForestClassifier(n_estimators=100, random_state=123, class_weight='balanced'),
-        "Gradient Boosting": HistGradientBoostingClassifier(random_state=123, class_weight='balanced'),
-        "Logistic Regression": LogisticRegression(random_state=123, class_weight='balanced', max_iter=1000),
-        "KNN": KNeighborsClassifier(n_neighbors=5),
-        "Extra Trees": ExtraTreesClassifier(n_estimators=100, random_state=123, class_weight='balanced')
+        "Random Forest": RandomForestClassifier(
+            n_estimators=178, max_depth=5, min_samples_split=6,
+            random_state=123, class_weight='balanced'),
+        "Gradient Boosting": HistGradientBoostingClassifier(
+            learning_rate=0.037631481983522556, max_depth=5, max_iter=114,
+            random_state=123, class_weight='balanced'),
+        "Logistic Regression": LogisticRegression(
+            C=3.1728548182032092, l1_ratio=1.0, max_iter=500, penalty='l2', solver='saga',
+            random_state=123, class_weight='balanced'),
+        "KNN": KNeighborsClassifier(
+            metric='minkowski', n_neighbors=4, p=1, weights='distance'),
+        "Extra Trees": ExtraTreesClassifier(
+            n_estimators=161, max_depth=14, min_samples_split=2,
+            random_state=123, class_weight='balanced')
     }
     
     resultados = {}
@@ -1317,6 +1313,37 @@ def mostrar_modelos():
     - **Curvas ROC** para comparación visual
     - **Matrices de confusión** para análisis detallado
     - **Interpretabilidad clínica** de resultados
+    """)
+
+    st.markdown("""
+    ### Búsqueda y Selección de Hiperparámetros
+    Para cada modelo, se realizó una búsqueda de hiperparámetros utilizando **RandomizedSearchCV** sobre una muestra estratificada de 1000 filas del conjunto de entrenamiento balanceado. Esto permitió evitar que los hiperparámetros óptimos quedaran en los límites extremos del rango de búsqueda.
+
+    El proceso consistió en:
+    - Definir un rango amplio de hiperparámetros para cada modelo
+    - Utilizar `RandomizedSearchCV` con 15 iteraciones y validación cruzada estratificada (cv=3)
+    - Métrica objetivo: **F1-macro**
+    - Selección del mejor conjunto de hiperparámetros para cada algoritmo
+
+    El código utilizado fue:
+    ```python
+    for name, model in models.items():
+        print(f"Entrenando {name}...")
+        search = RandomizedSearchCV(
+            model, parametros[name], n_iter=15, cv=3,
+            scoring="f1_macro", random_state=123, n_jobs=-1
+        )
+        search.fit(X_train_bal, y_train_bal)
+    ```
+
+    **Mejores hiperparámetros obtenidos:**
+    - **RandomForest:** {'max_depth': 5, 'min_samples_split': 6, 'n_estimators': 178}
+    - **HistGradientBoosting:** {'learning_rate': 0.0376, 'max_depth': 5, 'max_iter': 114}
+    - **KNN:** {'metric': 'minkowski', 'n_neighbors': 4, 'p': 1, 'weights': 'distance'}
+    - **ExtraTrees:** {'max_depth': 14, 'min_samples_split': 2, 'n_estimators': 161}
+    - **LogisticRegression:** {'C': 3.17, 'l1_ratio': 1.0, 'max_iter': 500, 'penalty': 'l2', 'solver': 'saga'}
+
+    Estos hiperparámetros se utilizaron para el entrenamiento final de los modelos en la aplicación.
     """)
 
 def mostrar_resultados():
