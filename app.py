@@ -47,7 +47,6 @@ plt.rcParams['figure.figsize'] = (10, 6)
 # Configuración de la página
 st.set_page_config(
     page_title="Trabajo Final ML Bioestadística",
-    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
