@@ -864,7 +864,7 @@ def aplicar_balanceo(estado):
     st.subheader("⚖️ Técnicas de Balanceo")
     
     # Usar los datos de PCA+MCA combinados
-    X_train_pca_mca = estado['X_train_pca_mca']
+    X_train_selected = estado['X_train_selected']
     y_train_enc = estado['y_train_enc']
     
     st.write("### Distribución Original vs Balanceada")
@@ -890,7 +890,7 @@ def aplicar_balanceo(estado):
     
     # Aplicar SMOTETomek como técnica de balanceo
     balanceador = SMOTETomek(random_state=123)
-    X_train_balanced, y_train_balanced = balanceador.fit_resample(X_train_pca_mca, y_train_enc)
+    X_train_balanced, y_train_balanced = balanceador.fit_resample(X_train_selected, y_train_enc)
     
     with col2:
         balanced_counts = pd.Series(y_train_balanced).value_counts()
@@ -934,7 +934,7 @@ def entrenar_modelos(estado):
     
     X_train_balanced = estado['X_train_balanced']
     y_train_balanced = estado['y_train_balanced']
-    X_test_pca_mca = estado['X_test_pca_mca']  # Usar datos de PCA+MCA para test
+    X_test_selected = estado['X_test_selected']  # Usar datos de rf para test
     y_test_enc = estado['y_test_enc']
     le = estado['le']
     
@@ -965,14 +965,14 @@ def entrenar_modelos(estado):
             
             # Predicciones
             if hasattr(modelo, "predict_proba"):
-                y_proba = modelo.predict_proba(X_test_pca_mca)[:, 1]
+                y_proba = modelo.predict_proba(X_test_selected)[:, 1]
             elif hasattr(modelo, "decision_function"):
-                y_proba = modelo.decision_function(X_test_pca_mca)
+                y_proba = modelo.decision_function(X_test_selected)
                 # Normalizar scores para que estén entre 0 y 1
                 y_proba = (y_proba - y_proba.min()) / (y_proba.max() - y_proba.min())
             else:
                 # Si no tiene probabilidades, usar predicciones binarias
-                y_proba = modelo.predict(X_test_pca_mca)
+                y_proba = modelo.predict(X_test_selected)
             
             # Buscar mejor umbral para F1-score
             best_f1 = 0
